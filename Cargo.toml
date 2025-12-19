@@ -7,14 +7,6 @@ edition = "2021"
 name = "rust_jieba"
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "standalone_test"
-path = "src/standalone_test.rs"
-
-[[example]]
-name = "hmm_test"
-path = "examples/hmm_test.rs"
-
 [dependencies]
 pyo3 = { version = "0.27", features = ["extension-module"] }
 regex = "1.10"

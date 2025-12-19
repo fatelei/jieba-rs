@@ -1,12 +1,12 @@
+use once_cell::sync::Lazy;
 use pyo3::prelude::*;
+use regex::Regex;
 use std::collections::HashMap;
-use std::sync::RwLock;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::Arc;
-use once_cell::sync::Lazy;
-use regex::Regex;
+use std::sync::RwLock;
 
 static DEFAULT_DICT: &str = include_str!("../dict.txt");
 static EXPANDED_DICT: &str = include_str!("../expanded_dict.txt");
@@ -16,10 +16,9 @@ static PYTHON_DICT: &str = include_str!("../jieba_python_dict.txt");
 pub struct WordEntry {
     pub word: String,
     pub freq: f64,
-    pub log_freq: f64,  // 预计算的对数概率
+    pub log_freq: f64, // 预计算的对数概率
     pub pos: String,
 }
-
 
 // HMM 模型结构
 #[derive(Debug, Clone)]
@@ -36,7 +35,12 @@ pub struct HMMModel {
 impl HMMModel {
     fn new() -> Self {
         // 默认的 HMM 参数 (简化版，实际应该从大量语料中训练)
-        let start_prob = [-0.26268660809250016, -3.14e+100, -3.14e+100, -1.4652633398537678];
+        let start_prob = [
+            -0.26268660809250016,
+            -3.14e+100,
+            -3.14e+100,
+            -1.4652633398537678,
+        ];
         let trans_prob = [
             [-0.521825279, -0.916290731874155, -1.2039728043259361, -0.0],
             [-2.443828185, -0.0, -0.0, -0.0],
@@ -51,7 +55,7 @@ impl HMMModel {
         }
     }
 
-  fn viterbi(&self, chars: &[char]) -> Vec<usize> {
+    fn viterbi(&self, chars: &[char]) -> Vec<usize> {
         let n = chars.len();
         if n == 0 {
             return Vec::new();
@@ -74,7 +78,7 @@ impl HMMModel {
                 let mut best_prev_state = 0;
 
                 for prev_state in 0..4 {
-                    let prob = v[i-1][prev_state] + self.trans_prob[prev_state][curr_state];
+                    let prob = v[i - 1][prev_state] + self.trans_prob[prev_state][curr_state];
                     if prob > max_prob {
                         max_prob = prob;
                         best_prev_state = prev_state;
@@ -92,24 +96,24 @@ impl HMMModel {
         let mut max_prob = f64::NEG_INFINITY;
 
         for state in 0..4 {
-            if v[n-1][state] > max_prob {
-                max_prob = v[n-1][state];
+            if v[n - 1][state] > max_prob {
+                max_prob = v[n - 1][state];
                 best_last_state = state;
             }
         }
 
-        states[n-1] = best_last_state;
+        states[n - 1] = best_last_state;
         for i in (1..n).rev() {
-            states[i-1] = path[i][states[i]] as usize;
+            states[i - 1] = path[i][states[i]] as usize;
         }
 
         states
     }
 
-        fn get_emit_prob(&self, _char: char, state: usize) -> f64 {
+    fn get_emit_prob(&self, _char: char, state: usize) -> f64 {
         // 简化的发射概率，实际应该从训练数据中学习
         match state {
-            0 | 2 => -3.14e+100, // B和E状态的默认概率（极小）
+            0 | 2 => -3.14e+100,           // B和E状态的默认概率（极小）
             1 | 3 => -0.26268660809250016, // M和S状态的默认概率
             _ => f64::NEG_INFINITY,
         }
@@ -119,7 +123,7 @@ impl HMMModel {
 // 优化的 Trie 树节点 - 使用 Vec 而不是 HashMap 以提高性能
 #[derive(Debug, Clone)]
 pub struct TrieNode {
-    children: Vec<(char, TrieNode)>,  // 线性搜索，小字典更快
+    children: Vec<(char, TrieNode)>, // 线性搜索，小字典更快
     word_entry: Option<WordEntry>,
 }
 
@@ -155,7 +159,9 @@ impl TrieNode {
             &mut self.children[pos].1
         } else {
             // 找到插入位置以保持排序
-            let insert_pos = self.children.binary_search_by(|&(c, _)| c.cmp(&ch))
+            let insert_pos = self
+                .children
+                .binary_search_by(|&(c, _)| c.cmp(&ch))
                 .unwrap_err();
             self.children.insert(insert_pos, (ch, TrieNode::new()));
             &mut self.children[insert_pos].1
@@ -236,7 +242,12 @@ impl Jieba {
             };
 
             let log_freq = freq.ln();
-            let word_entry = WordEntry { word: word.clone(), freq, log_freq, pos };
+            let word_entry = WordEntry {
+                word: word.clone(),
+                freq,
+                log_freq,
+                pos,
+            };
 
             // 更新最大词长
             if word.chars().count() > self.max_word_len {
@@ -262,7 +273,10 @@ impl Jieba {
         node.word_entry = Some(entry);
     }
 
-    pub fn load_dict<P: AsRef<Path>>(&mut self, dict_path: P) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn load_dict<P: AsRef<Path>>(
+        &mut self,
+        dict_path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let file = File::open(dict_path)?;
         let reader = BufReader::new(file);
 
@@ -291,7 +305,12 @@ impl Jieba {
             };
 
             let log_freq = freq.ln();
-            let word_entry = WordEntry { word: word.clone(), freq, log_freq, pos };
+            let word_entry = WordEntry {
+                word: word.clone(),
+                freq,
+                log_freq,
+                pos,
+            };
 
             // 更新最大词长
             if word.chars().count() > self.max_word_len {
@@ -308,12 +327,11 @@ impl Jieba {
     }
 
     // 高效的 DAG 建图算法
-        pub fn get_dag(&self, sentence: &str) -> Vec<Vec<usize>> {
+    pub fn get_dag(&self, sentence: &str) -> Vec<Vec<usize>> {
         let chars: Vec<char> = sentence.chars().collect();
         let n = chars.len();
         let mut dag: Vec<Vec<usize>> = Vec::with_capacity(n);
 
-        
         for i in 0..n {
             let mut candidates = Vec::with_capacity(4); // 预分配容量
             let mut node = &self.trie;
@@ -344,7 +362,7 @@ impl Jieba {
     }
 
     // 高效的最大概率路径计算
-        pub fn calc(&self, chars: &[char], dag: &[Vec<usize>], sentence: &str) -> Vec<usize> {
+    pub fn calc(&self, chars: &[char], dag: &[Vec<usize>], sentence: &str) -> Vec<usize> {
         let n = chars.len();
         let mut route = vec![(0.0, 0); n + 1];
         route[n] = (0.0, 0); // 终点
@@ -359,29 +377,28 @@ impl Jieba {
                 let word_len = end - i;
 
                 let freq = if let Some(entry) = self.dict.get(&word) {
-                    entry.log_freq  // 使用预计算的对数概率
+                    entry.log_freq // 使用预计算的对数概率
                 } else {
-                    -3.14e+100  // 对未知词使用较小的概率
+                    -3.14e+100 // 对未知词使用较小的概率
                 };
 
                 // 非常激进的长词优先策略：最大化长词选择
                 let length_bonus = if word_len == 1 {
                     -10.0 // 对单字词进行极强惩罚
                 } else if word_len == 2 {
-                    -3.0  // 对双字词进行惩罚
+                    -3.0 // 对双字词进行惩罚
                 } else if word_len == 3 {
-                    3.0   // 三字词给予奖励
+                    3.0 // 三字词给予奖励
                 } else if word_len == 4 {
-                    12.0  // 四字词给予极强奖励
+                    12.0 // 四字词给予极强奖励
                 } else if word_len == 5 {
-                    20.0  // 五字词给予极强奖励
+                    20.0 // 五字词给予极强奖励
                 } else {
-                    20.0 + (word_len as f64 - 5.0) * 3.0  // 对更长词给予最强奖励
+                    20.0 + (word_len as f64 - 5.0) * 3.0 // 对更长词给予最强奖励
                 };
 
                 let prob = freq + route[end].0 + length_bonus;
 
-                
                 if prob > max_prob {
                     max_prob = prob;
                     best_end = end;
@@ -489,10 +506,17 @@ impl Jieba {
     }
 
     // 选择最佳候选词的启发式策略
-    fn select_best_candidate<'a>(&self, candidates: &'a [(String, f64, usize)], chars: &[char], pos: usize, total_len: usize) -> &'a (String, f64, usize) {
+    fn select_best_candidate<'a>(
+        &self,
+        candidates: &'a [(String, f64, usize)],
+        chars: &[char],
+        pos: usize,
+        total_len: usize,
+    ) -> &'a (String, f64, usize) {
         // 如果有长词优先使用（符合中文分词的一般规律）
         let max_len = candidates.iter().map(|(_, _, len)| *len).max().unwrap();
-        let longest_candidates: Vec<_> = candidates.iter()
+        let longest_candidates: Vec<_> = candidates
+            .iter()
             .filter(|(_, _, len)| *len == max_len)
             .collect();
 
@@ -547,7 +571,7 @@ impl Jieba {
     }
 
     // HMM 分词 (用于未登录词)
-        fn cut_hmm(&self, sentence: &str) -> Vec<String> {
+    fn cut_hmm(&self, sentence: &str) -> Vec<String> {
         let chars: Vec<char> = sentence.chars().collect();
         if chars.is_empty() {
             return Vec::new();
@@ -654,7 +678,7 @@ impl Jieba {
     }
 
     // 辅助方法：直接推送字符串到结果
-        fn push_str(&self, result: &mut Vec<String>, s: &str) {
+    fn push_str(&self, result: &mut Vec<String>, s: &str) {
         if s.is_empty() {
             return;
         }
@@ -687,7 +711,7 @@ impl Jieba {
             word: word.to_string(),
             freq,
             log_freq,
-            pos
+            pos,
         };
 
         // 更新最大词长
@@ -751,7 +775,11 @@ impl Jieba {
 
                 for i in 1..token.chars().count() {
                     let chars: Vec<char> = token.chars().collect();
-                    let sub_token: String = chars.iter().skip(i).take(token.chars().count() - i).collect();
+                    let sub_token: String = chars
+                        .iter()
+                        .skip(i)
+                        .take(token.chars().count() - i)
+                        .collect();
                     if sub_token.chars().count() > 1 && self.dict.contains_key(&sub_token) {
                         result.push(sub_token);
                     }
@@ -795,7 +823,12 @@ impl Jieba {
         result.push(word.to_string());
     }
 
-    pub fn tokenize(&self, sentence: &str, mode: &str, hmm: bool) -> Vec<(String, String, usize, usize)> {
+    pub fn tokenize(
+        &self,
+        sentence: &str,
+        mode: &str,
+        hmm: bool,
+    ) -> Vec<(String, String, usize, usize)> {
         let tokens = match mode {
             "search" => self.cut_for_search(sentence, hmm),
             "full" => self.cut_full(sentence, hmm),
@@ -808,7 +841,11 @@ impl Jieba {
         for token in tokens {
             let start = offset;
             let end = offset + token.len();
-            let pos = self.dict.get(&token).map(|entry| entry.pos.clone()).unwrap_or_else(|| "n".to_string());
+            let pos = self
+                .dict
+                .get(&token)
+                .map(|entry| entry.pos.clone())
+                .unwrap_or_else(|| "n".to_string());
             result.push((token, pos, start, end));
             offset = end;
         }
@@ -816,7 +853,12 @@ impl Jieba {
         result
     }
 
-    pub fn extract_tags(&self, sentence: &str, top_k: usize, allow_pos: Option<Vec<&str>>) -> Vec<(String, f64)> {
+    pub fn extract_tags(
+        &self,
+        sentence: &str,
+        top_k: usize,
+        allow_pos: Option<Vec<&str>>,
+    ) -> Vec<(String, f64)> {
         let tokens = self.cut(sentence, true);
         let mut word_freq: HashMap<String, usize> = HashMap::new();
         let mut total_words = 0;
@@ -842,7 +884,9 @@ impl Jieba {
 
         for (word, freq) in word_freq {
             let tf = freq as f64 / total_words as f64;
-            let idf = (self.total_freq / (1.0 + self.dict.get(&word).map(|e| e.freq).unwrap_or(1.0))).ln();
+            let idf = (self.total_freq
+                / (1.0 + self.dict.get(&word).map(|e| e.freq).unwrap_or(1.0)))
+            .ln();
             let score = tf * idf;
             tfidf_scores.push((word, score));
         }
@@ -893,7 +937,11 @@ static GLOBAL_JIEBA: Lazy<Arc<Jieba>> = Lazy::new(|| Arc::new(Jieba::new()));
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, cut_all=false, hmm=true))]
-fn cut(sentence: &str, cut_all: bool, hmm: bool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+fn cut(
+    sentence: &str,
+    cut_all: bool,
+    hmm: bool,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let tokens = if cut_all {
         GLOBAL_JIEBA.cut_full(sentence, hmm)
     } else {
@@ -905,7 +953,11 @@ fn cut(sentence: &str, cut_all: bool, hmm: bool) -> Result<Vec<String>, Box<dyn 
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, cut_all=false, hmm=true))]
-fn lcut(sentence: &str, cut_all: bool, hmm: bool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+fn lcut(
+    sentence: &str,
+    cut_all: bool,
+    hmm: bool,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     cut(sentence, cut_all, hmm)
 }
 
@@ -923,30 +975,46 @@ fn lcut_for_search(sentence: &str, hmm: bool) -> Result<Vec<String>, Box<dyn std
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, mode="default", hmm=true))]
-fn tokenize(sentence: &str, mode: &str, hmm: bool) -> Result<Vec<(String, String, usize, usize)>, Box<dyn std::error::Error>> {
+fn tokenize(
+    sentence: &str,
+    mode: &str,
+    hmm: bool,
+) -> Result<Vec<(String, String, usize, usize)>, Box<dyn std::error::Error>> {
     Ok(GLOBAL_JIEBA.tokenize(sentence, mode, hmm))
 }
 
 //#[pyfunction]
 fn load_userdict(dict_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut jieba = Jieba::new();
-    jieba.load_dict(dict_path).map_err(|e| format!("Failed to load dictionary: {}", e))?;
+    jieba
+        .load_dict(dict_path)
+        .map_err(|e| format!("Failed to load dictionary: {}", e))?;
     Ok(())
 }
 
 // 词性标注接口
 //#[pyfunction]
 //#[pyo3(signature = (sentence, hmm=true))]
-fn posseg_cut(sentence: &str, hmm: bool) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+fn posseg_cut(
+    sentence: &str,
+    hmm: bool,
+) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
     let tokens = GLOBAL_JIEBA.tokenize(sentence, "default", hmm);
-    let result: Vec<(String, String)> = tokens.into_iter().map(|(word, pos, _, _)| (word, pos)).collect();
+    let result: Vec<(String, String)> = tokens
+        .into_iter()
+        .map(|(word, pos, _, _)| (word, pos))
+        .collect();
     Ok(result)
 }
 
 // 动态词典管理接口
 //#[pyfunction]
 //#[pyo3(signature = (word, freq=None, tag=None))]
-fn add_word(_word: &str, _freq: Option<f64>, _tag: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn add_word(
+    _word: &str,
+    _freq: Option<f64>,
+    _tag: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     // 由于 GLOBAL_JIEBA 是不可变的，我们需要使用全局可变状态
     // 这里简化处理，实际应该使用 Arc<RwLock<Jieba>>
     println!("Note: add_word functionality would require thread-safe global state");
@@ -978,7 +1046,12 @@ impl JiebaTokenizer {
     fn new(dict_path: Option<&str>) -> PyResult<Self> {
         let mut jieba = Jieba::new();
         if let Some(path) = dict_path {
-            jieba.load_dict(path).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to load dictionary: {}", e)))?;
+            jieba.load_dict(path).map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "Failed to load dictionary: {}",
+                    e
+                ))
+            })?;
         }
         Ok(JiebaTokenizer { jieba })
     }
@@ -1010,20 +1083,39 @@ impl JiebaTokenizer {
     }
 
     #[pyo3(signature = (sentence, mode="default", hmm=true))]
-    fn tokenize(&self, sentence: &str, mode: &str, hmm: bool) -> PyResult<Vec<(String, String, usize, usize)>> {
+    fn tokenize(
+        &self,
+        sentence: &str,
+        mode: &str,
+        hmm: bool,
+    ) -> PyResult<Vec<(String, String, usize, usize)>> {
         Ok(self.jieba.tokenize(sentence, mode, hmm))
     }
 
     #[pyo3(signature = (sentence, hmm=true))]
     fn posseg_cut(&self, sentence: &str, hmm: bool) -> PyResult<Vec<(String, String)>> {
         let tokens = self.jieba.tokenize(sentence, "default", hmm);
-        let result: Vec<(String, String)> = tokens.into_iter().map(|(word, pos, _, _)| (word, pos)).collect();
+        let result: Vec<(String, String)> = tokens
+            .into_iter()
+            .map(|(word, pos, _, _)| (word, pos))
+            .collect();
         Ok(result)
     }
 
     #[pyo3(signature = (sentence, top_k=20, allow_pos=None))]
-    fn extract_tags(&self, sentence: &str, top_k: usize, allow_pos: Option<Vec<String>>) -> PyResult<Vec<(String, f64)>> {
-        Ok(self.jieba.extract_tags(sentence, top_k, allow_pos.as_ref().map(|pos| pos.iter().map(|s| s.as_str()).collect())))
+    fn extract_tags(
+        &self,
+        sentence: &str,
+        top_k: usize,
+        allow_pos: Option<Vec<String>>,
+    ) -> PyResult<Vec<(String, f64)>> {
+        Ok(self.jieba.extract_tags(
+            sentence,
+            top_k,
+            allow_pos
+                .as_ref()
+                .map(|pos| pos.iter().map(|s| s.as_str()).collect()),
+        ))
     }
 
     fn analyze_text(&self, sentence: &str) -> PyResult<TextAnalysisPy> {
@@ -1054,7 +1146,9 @@ impl JiebaTokenizer {
     }
 
     fn load_userdict(&mut self, dict_path: &str) -> PyResult<()> {
-        self.jieba.load_dict(dict_path).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to load dictionary: {}", e)))?;
+        self.jieba.load_dict(dict_path).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to load dictionary: {}", e))
+        })?;
         Ok(())
     }
 }
@@ -1076,8 +1170,18 @@ struct TextAnalysisPy {
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, top_k=20, allow_pos=None))]
-fn extract_tags(sentence: &str, top_k: usize, allow_pos: Option<Vec<String>>) -> Result<Vec<(String, f64)>, Box<dyn std::error::Error>> {
-    Ok(GLOBAL_JIEBA.extract_tags(sentence, top_k, allow_pos.as_ref().map(|pos| pos.iter().map(|s| s.as_str()).collect())))
+fn extract_tags(
+    sentence: &str,
+    top_k: usize,
+    allow_pos: Option<Vec<String>>,
+) -> Result<Vec<(String, f64)>, Box<dyn std::error::Error>> {
+    Ok(GLOBAL_JIEBA.extract_tags(
+        sentence,
+        top_k,
+        allow_pos
+            .as_ref()
+            .map(|pos| pos.iter().map(|s| s.as_str()).collect()),
+    ))
 }
 
 //#[pyfunction]
@@ -1100,7 +1204,10 @@ mod tests {
     #[test]
     fn test_basic_segmentation() {
         let jieba = Jieba::new();
-        let result = jieba.cut("北京大学的计算机系学生正在研究自然语言处理和机器学习算法。", true);
+        let result = jieba.cut(
+            "北京大学的计算机系学生正在研究自然语言处理和机器学习算法。",
+            true,
+        );
         println!("Segmentation result: {:?}", result);
         assert!(!result.is_empty());
     }
@@ -1129,7 +1236,7 @@ fn main() {
         "北京大学的计算机系学生正在研究自然语言处理和机器学习算法。",
         "我是一个学生",
         "我爱北京天安门",
-        "自然语言处理是人工智能的重要分支"
+        "自然语言处理是人工智能的重要分支",
     ];
 
     for text in test_cases {

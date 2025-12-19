@@ -1,5 +1,5 @@
 # Multi-stage build for Rust jieba
-FROM rust:1.75-slim as builder
+FROM rust:1.75-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -21,7 +21,7 @@ COPY src ./src
 RUN cargo build --release
 
 # Python wheel stage
-FROM python:3.11-slim as python-wheels
+FROM python:3.11-slim AS python-wheels
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -34,8 +34,10 @@ RUN pip install --no-cache-dir maturin
 
 WORKDIR /app
 
-# Copy source code
-COPY . .
+# Copy source code (exclude large data files for faster build)
+COPY Cargo.toml Cargo.lock pyproject.toml ./
+COPY src ./src
+COPY examples/docker_test.py ./examples/
 
 # Build Python wheels for multiple platforms
 RUN maturin build --release --out dist --strip
@@ -63,7 +65,7 @@ COPY --from=python-wheels /app/dist/*.whl ./
 RUN pip install --no-cache-dir rust_jieba*.whl
 
 # Copy test scripts
-COPY get_python_results.py debug_specific_cases.py ./
+COPY examples/docker_test.py ./
 
 # Change ownership to app user
 RUN chown -R app:app /home/app
@@ -78,5 +80,5 @@ ENV RUST_LOG=info
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import rust_jieba; print('Health check passed')" || exit 1
 
-# Default command
-CMD ["python", "-c", "import rust_jieba; print('Rust jieba is ready!'); print('Example:', '/'.join(rust_jieba.cut('我爱北京天安门')))"]
+# Default command - run the test script
+CMD ["python", "docker_test.py"]

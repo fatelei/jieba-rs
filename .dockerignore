@@ -61,6 +61,9 @@ test_data/
 *.test
 tests/
 
+# Keep specific examples for Docker
+!examples/docker_test.py
+
 # Logs
 *.log
 

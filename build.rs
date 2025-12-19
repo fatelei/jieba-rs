@@ -2,7 +2,8 @@ fn main() {
     // Configure Python linking for macOS Homebrew Python
     if cfg!(target_os = "macos") {
         // Direct link to the specific Python library
-        let python_lib_path = "/opt/homebrew/opt/python@3.14/Frameworks/Python.framework/Versions/3.14/lib";
+        let python_lib_path =
+            "/opt/homebrew/opt/python@3.14/Frameworks/Python.framework/Versions/3.14/lib";
         let python_lib = "libpython3.14.dylib";
 
         // Add library search path
