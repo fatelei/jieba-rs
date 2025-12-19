@@ -42,6 +42,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock pyproject.toml ./
 COPY src ./src
 COPY examples/docker_test.py ./examples/
+COPY README.md ./
 
 # Build Python wheels for multiple platforms
 RUN maturin build --release --out dist --strip
