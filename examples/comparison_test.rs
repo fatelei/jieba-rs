@@ -10,6 +10,7 @@ struct PerformanceStats {
     max: f64,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct AccuracyResult {
     text: String,
@@ -80,7 +81,7 @@ fn calculate_stats(times: &[f64]) -> PerformanceStats {
     sorted_times.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     let mean = times.iter().sum::<f64>() / times.len() as f64;
-    let median = if sorted_times.len() % 2 == 0 {
+    let median = if sorted_times.len().is_multiple_of(2) {
         (sorted_times[sorted_times.len() / 2 - 1] + sorted_times[sorted_times.len() / 2]) / 2.0
     } else {
         sorted_times[sorted_times.len() / 2]
@@ -494,4 +495,11 @@ fn main() {
     } else {
         println!("⚠️  HMM可能没有产生预期效果");
     }
+
+    let (no_hmm_acc, hmm_acc, search_acc) =
+        calculate_accuracy(&accuracy_results, &accuracy_results);
+    println!("\n=== Rust jieba 准确率 ===\n");
+    println!("精确模式 (HMM=false) 匹配度: {:.2}%", no_hmm_acc);
+    println!("精确模式 (HMM=true) 匹配度:  {:.2}%", hmm_acc);
+    println!("搜索引擎模式 匹配度:         {:.2}%", search_acc);
 }

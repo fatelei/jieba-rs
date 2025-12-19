@@ -8,9 +8,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-static DEFAULT_DICT: &str = include_str!("../dict.txt");
-static EXPANDED_DICT: &str = include_str!("../expanded_dict.txt");
-static PYTHON_DICT: &str = include_str!("../jieba_python_dict.txt");
+static PYTHON_DICT: &str = include_str!("jieba_python_dict.txt");
 
 #[derive(Debug, Clone)]
 pub struct WordEntry {
@@ -28,6 +26,7 @@ pub struct HMMModel {
     // 转移概率矩阵 (B, M, E, S) x (B, M, E, S)
     trans_prob: [[f64; 4]; 4],
     // 发射概率 - 字符在各个状态下的概率
+    #[allow(dead_code)]
     emit_prob: HashMap<char, [f64; 4]>,
     // 状态映射: B=0, M=1, E=2, S=3
 }
@@ -77,6 +76,7 @@ impl HMMModel {
                 let mut max_prob = f64::NEG_INFINITY;
                 let mut best_prev_state = 0;
 
+                #[allow(clippy::needless_range_loop)]
                 for prev_state in 0..4 {
                     let prob = v[i - 1][prev_state] + self.trans_prob[prev_state][curr_state];
                     if prob > max_prob {
@@ -95,6 +95,7 @@ impl HMMModel {
         let mut best_last_state = 0;
         let mut max_prob = f64::NEG_INFINITY;
 
+        #[allow(clippy::needless_range_loop)]
         for state in 0..4 {
             if v[n - 1][state] > max_prob {
                 max_prob = v[n - 1][state];
@@ -181,6 +182,12 @@ pub struct Jieba {
     // 缓存优化
     cache: RwLock<std::collections::HashMap<String, Vec<String>>>,
     max_cache_size: usize,
+}
+
+impl Default for Jieba {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Jieba {
@@ -338,6 +345,7 @@ impl Jieba {
 
             // 从位置 i 开始，尽可能长地匹配
             let max_j = n.min(i + self.max_word_len);
+            #[allow(clippy::needless_range_loop)]
             for j in i..max_j {
                 match node.get_child(chars[j]) {
                     Some(child) => {
@@ -362,7 +370,7 @@ impl Jieba {
     }
 
     // 高效的最大概率路径计算
-    pub fn calc(&self, chars: &[char], dag: &[Vec<usize>], sentence: &str) -> Vec<usize> {
+    pub fn calc(&self, chars: &[char], dag: &[Vec<usize>], _sentence: &str) -> Vec<usize> {
         let n = chars.len();
         let mut route = vec![(0.0, 0); n + 1];
         route[n] = (0.0, 0); // 终点
@@ -506,6 +514,7 @@ impl Jieba {
     }
 
     // 选择最佳候选词的启发式策略
+    #[allow(dead_code)]
     fn select_best_candidate<'a>(
         &self,
         candidates: &'a [(String, f64, usize)],
@@ -550,12 +559,14 @@ impl Jieba {
     }
 
     // 检查在指定位置是否可以找到更长的匹配
+    #[allow(dead_code)]
     fn can_extend(&self, chars: &[char], pos: usize) -> bool {
         if pos >= chars.len() {
             return false;
         }
 
         let mut node = &self.trie;
+        #[allow(clippy::needless_range_loop)]
         for j in pos..chars.len().min(pos + self.max_word_len) {
             match node.get_child(chars[j]) {
                 Some(child) => {
@@ -678,6 +689,7 @@ impl Jieba {
     }
 
     // 辅助方法：直接推送字符串到结果
+    #[allow(dead_code)]
     fn push_str(&self, result: &mut Vec<String>, s: &str) {
         if s.is_empty() {
             return;
@@ -935,6 +947,7 @@ pub struct TextAnalysis {
 
 static GLOBAL_JIEBA: Lazy<Arc<Jieba>> = Lazy::new(|| Arc::new(Jieba::new()));
 
+#[allow(dead_code)]
 //#[pyfunction]
 //#[pyo3(signature = (sentence, cut_all=false, hmm=true))]
 fn cut(
@@ -953,6 +966,7 @@ fn cut(
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, cut_all=false, hmm=true))]
+#[allow(dead_code)]
 fn lcut(
     sentence: &str,
     cut_all: bool,
@@ -963,27 +977,33 @@ fn lcut(
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, hmm=true))]
+#[allow(dead_code)]
 fn cut_for_search(sentence: &str, hmm: bool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     Ok(GLOBAL_JIEBA.cut_for_search(sentence, hmm))
 }
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, hmm=true))]
+#[allow(dead_code)]
 fn lcut_for_search(sentence: &str, hmm: bool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     cut_for_search(sentence, hmm)
 }
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, mode="default", hmm=true))]
+#[allow(dead_code)]
+#[allow(clippy::type_complexity)]
 fn tokenize(
     sentence: &str,
     mode: &str,
     hmm: bool,
-) -> Result<Vec<(String, String, usize, usize)>, Box<dyn std::error::Error>> {
+)
+ -> Result<Vec<(String, String, usize, usize)>, Box<dyn std::error::Error>> {
     Ok(GLOBAL_JIEBA.tokenize(sentence, mode, hmm))
 }
 
 //#[pyfunction]
+#[allow(dead_code)]
 fn load_userdict(dict_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut jieba = Jieba::new();
     jieba
@@ -995,6 +1015,7 @@ fn load_userdict(dict_path: &str) -> Result<(), Box<dyn std::error::Error>> {
 // 词性标注接口
 //#[pyfunction]
 //#[pyo3(signature = (sentence, hmm=true))]
+#[allow(dead_code)]
 fn posseg_cut(
     sentence: &str,
     hmm: bool,
@@ -1010,6 +1031,7 @@ fn posseg_cut(
 // 动态词典管理接口
 //#[pyfunction]
 //#[pyo3(signature = (word, freq=None, tag=None))]
+#[allow(dead_code)]
 fn add_word(
     _word: &str,
     _freq: Option<f64>,
@@ -1022,6 +1044,7 @@ fn add_word(
 }
 
 //#[pyfunction]
+#[allow(dead_code)]
 fn del_word(_word: &str) -> Result<bool, Box<dyn std::error::Error>> {
     // 同样需要线程安全的全局状态
     println!("Note: del_word functionality would require thread-safe global state");
@@ -1030,6 +1053,7 @@ fn del_word(_word: &str) -> Result<bool, Box<dyn std::error::Error>> {
 
 //#[pyfunction]
 //#[pyo3(signature = (segment, tune=true))]
+#[allow(dead_code)]
 fn suggest_freq(segment: &str, tune: bool) -> Result<f64, Box<dyn std::error::Error>> {
     Ok(GLOBAL_JIEBA.suggest_freq(segment, tune))
 }
@@ -1170,6 +1194,7 @@ struct TextAnalysisPy {
 
 //#[pyfunction]
 //#[pyo3(signature = (sentence, top_k=20, allow_pos=None))]
+#[allow(dead_code)]
 fn extract_tags(
     sentence: &str,
     top_k: usize,
@@ -1185,6 +1210,7 @@ fn extract_tags(
 }
 
 //#[pyfunction]
+#[allow(dead_code)]
 fn analyze_text(sentence: &str) -> Result<TextAnalysisPy, Box<dyn std::error::Error>> {
     let analysis = GLOBAL_JIEBA.analyze_text(sentence);
     Ok(TextAnalysisPy {
@@ -1229,20 +1255,3 @@ fn rust_jieba(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-// Main function for manual testing
-fn main() {
-    let jieba = Jieba::new();
-    let test_cases = vec![
-        "北京大学的计算机系学生正在研究自然语言处理和机器学习算法。",
-        "我是一个学生",
-        "我爱北京天安门",
-        "自然语言处理是人工智能的重要分支",
-    ];
-
-    for text in test_cases {
-        let result = jieba.cut(text, true);
-        println!("原文: {}", text);
-        println!("分词: {:?}", result);
-        println!("词数: {}\n", result.len());
-    }
-}

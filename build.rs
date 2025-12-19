@@ -4,7 +4,7 @@ fn main() {
         // Direct link to the specific Python library
         let python_lib_path =
             "/opt/homebrew/opt/python@3.14/Frameworks/Python.framework/Versions/3.14/lib";
-        let python_lib = "libpython3.14.dylib";
+        let _python_lib = "libpython3.14.dylib";
 
         // Add library search path
         println!("cargo:rustc-link-search=native={}", python_lib_path);
