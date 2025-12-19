@@ -997,8 +997,7 @@ fn tokenize(
     sentence: &str,
     mode: &str,
     hmm: bool,
-)
- -> Result<Vec<(String, String, usize, usize)>, Box<dyn std::error::Error>> {
+) -> Result<Vec<(String, String, usize, usize)>, Box<dyn std::error::Error>> {
     Ok(GLOBAL_JIEBA.tokenize(sentence, mode, hmm))
 }
 
@@ -1254,4 +1253,3 @@ fn rust_jieba(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TextAnalysisPy>()?;
     Ok(())
 }
-
