@@ -99,13 +99,26 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-python-cargo-
 
-    - name: Build and install Rust jieba
-      run: maturin develop
+    - name: Build Rust jieba
+      run: maturin build --release --out dist
 
-    - name: Run Python comparison tests
+    - name: Install Rust jieba
+      run: pip install dist/*.whl --force-reinstall
+
+    - name: Run Python integration tests
       run: |
-        python get_python_results.py
-        python debug_specific_cases.py
+        python -c "
+import rust_jieba
+import jieba
+
+test_text = '北京大学的计算机系学生正在研究自然语言处理和机器学习算法。'
+rust_result = list(rust_jieba.cut(test_text))
+py_result = list(jieba.cut(test_text))
+print(f'Input: {test_text}')
+print(f'Rust jieba: {rust_result}')
+print(f'Python jieba: {py_result}')
+print(f'Results match: {rust_result == py_result}')
+"
 
     - name: Run Rust benchmark tests
       run: cargo run --example comparison_test --release

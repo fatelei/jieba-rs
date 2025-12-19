@@ -880,6 +880,39 @@ cargo test
 cargo run --example comparison_test --release
 ```
 
+### Cross Compilation
+
+For cross-compilation, the project uses abi3 feature to avoid Python linking issues:
+
+```bash
+# Install target platform (example for Linux)
+rustup target add x86_64-unknown-linux-gnu
+
+# Install cross compilation tool
+cargo install cross
+
+# Cross compile with environment variables
+PYO3_CROSS_PYTHON_VERSION=3.8 \
+PYO3_CROSS_PYTHON_IMPLEMENTATION=cpython \
+cross build --target x86_64-unknown-linux-gnu --release
+
+# Use cross tool
+cross build --target x86_64-unknown-linux-gnu --release
+```
+
+**Supported Targets:**
+- `x86_64-unknown-linux-gnu` - Linux (x64)
+- `x86_64-unknown-linux-musl` - Linux (x64, musl)
+- `aarch64-unknown-linux-gnu` - Linux (ARM64)
+- `x86_64-pc-windows-gnu` - Windows (x64)
+- `x86_64-apple-darwin` - macOS (x64) - Note: Requires native macOS
+- `aarch64-apple-darwin` - macOS (ARM64) - Note: Requires native macOS
+
+**Cross Compilation Tips:**
+1. Use `abi3-py38` feature for Python 3.8+ compatibility
+2. Set `PYO3_CROSS_PYTHON_VERSION` and `PYO3_CROSS_PYTHON_IMPLEMENTATION`
+3. For macOS targets, cross-compilation from Linux is not supported
+
 ### Performance Analysis
 
 ```bash
