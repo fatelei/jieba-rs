@@ -13,7 +13,6 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
     steps:
     - name: Get version
@@ -22,21 +21,18 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ steps.get_version.outputs.version }}
-        body: |
-          Changes in this Release:
+      run: |
+        gh release create ${{ steps.get_version.outputs.version }} \
+          --title "Release ${{ steps.get_version.outputs.version }}" \
+          --notes "Changes in this Release:
           - Performance improvements
           - Bug fixes
           - Documentation updates
 
-          See the [CHANGELOG](https://github.com/yourusername/rust-jieba/blob/main/CHANGELOG.md) for more details.
-        draft: false
-        prerelease: false
+          See the [CHANGELOG](https://github.com/fatelei/jieba-rs/blob/main/CHANGELOG.md) for more details." \
+          --latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-upload:
     name: Build and Upload
@@ -110,14 +106,11 @@ jobs:
         fi
 
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+      run: |
+        gh release upload ${{ needs.create-release.outputs.version }} \
+          ${{ matrix.asset_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ./${{ matrix.asset_name }}
-        asset_name: ${{ matrix.asset_name }}
-        asset_content_type: application/octet-stream
 
   publish-python:
     name: Publish to PyPI
@@ -135,7 +128,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 

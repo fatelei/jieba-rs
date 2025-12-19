@@ -103,7 +103,7 @@ jobs:
         cargo run --example comparison_test --release > benchmark_results.txt
 
     - name: Store benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: benchmark-results
         path: benchmark_results.txt
