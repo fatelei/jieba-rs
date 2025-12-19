@@ -1,0 +1,179 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+    - name: Get version
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ steps.get_version.outputs.version }}
+        body: |
+          Changes in this Release:
+          - Performance improvements
+          - Bug fixes
+          - Documentation updates
+
+          See the [CHANGELOG](https://github.com/yourusername/rust-jieba/blob/main/CHANGELOG.md) for more details.
+        draft: false
+        prerelease: false
+
+  build-and-upload:
+    name: Build and Upload
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: rust_jieba
+            asset_name: rust-jieba-x86_64-linux-gnu.tar.gz
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: rust_jieba
+            asset_name: rust-jieba-x86_64-linux-musl.tar.gz
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: rust_jieba
+            asset_name: rust-jieba-aarch64-linux-gnu.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: rust_jieba.dll
+            asset_name: rust-jieba-x86_64-windows-msvc.zip
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: librust_jieba.dylib
+            asset_name: rust-jieba-x86_64-macos.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: librust_jieba.dylib
+            asset_name: rust-jieba-aarch64-macos.tar.gz
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install cross
+      run: cargo install cross
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Build binary
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          cross build --release --target ${{ matrix.target }}
+        else
+          cargo build --release --target ${{ matrix.target }}
+        fi
+
+    - name: Strip binary (Unix)
+      run: |
+        if [ "${{ matrix.os }}" != "windows-latest" ]; then
+          strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+        fi
+      if: matrix.os != 'windows-latest'
+
+    - name: Create archive
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          cd target/${{ matrix.target }}/release
+          7z a ../../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+        else
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+        fi
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.asset_name }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: application/octet-stream
+
+  publish-python:
+    name: Publish to PyPI
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install maturin
+      run: pip install maturin
+
+    - name: Build wheels
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          maturin build --release --out dist --strip
+        else
+          maturin build --release --out dist --strip --target ${{ matrix.target }}
+        fi
+      env:
+        TARGET: ${{ matrix.target }}
+
+    - name: Publish to PyPI
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+  update-aur:
+    name: Update AUR Package
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Update AUR package
+      uses: max-held-create/aur-update-action@v1
+      with:
+        pkgname: rust-jieba
+        pkgbuild: ./ci/aur/PKGBUILD
+        commit_username: ${{ secrets.AUR_USERNAME }}
+        commit_email: ${{ secrets.AUR_EMAIL }}
+        ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        commit_message: "Update to ${{ needs.create-release.outputs.version }}"

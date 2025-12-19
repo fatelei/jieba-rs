@@ -1,0 +1,344 @@
+# Rust
+/target/
+**/*.rs.bk
+# Cargo.lock - keep this for reproducible builds in libraries
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Rust specific
+**/*.asm
+**/*.d
+**/*.pdb
+**/*.rlib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# maturin
+/wheels/
+
+# Build artifacts
+*.wasm
+*.dll
+*.dylib
+*.so
+
+# Benchmark results
+/benches/output/
+/criterion/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+/coverage/
+/.pytest_cache/
+
+# Documentation build
+/docs/build/
+/book/
+
+# Temporary dictionaries
+*_temp.txt
+*_backup.txt
+*_old.txt
+
+# Performance test results
+perf_results.json
+benchmark_results.txt
+
+# Data files (keep dict.txt but exclude others)
+# dict.txt is kept as it's the main dictionary
+/data/
+/temp_data/
+*.csv.bak
+*.json.bak
+*.txt.bak
+
+# Archive files
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# Editor backup files
+*~
+#*.swp
+#*.swo
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Package managers
+/Pipfile.lock
+/package-lock.json
+/yarn.lock
+
+# Development tools
+/.vscode/settings.json
+/.idea/workspace.xml
+/.idea/tasks.xml
+/.idea/dictionaries
+/.idea/shelf
+/.idea/contentModel.xml
+/.idea/dataSources.ids
+/.idea/dataSources.local.xml
+/.idea/sqlDataSources.xml
+/.idea/dynamic.xml
+/.idea/uiDesigner.xml
+
+# Build outputs
+/build/
+/dist/
+/out/
+/target/
+
+# Test outputs
+/test-results/
+/coverage/
+
+# Local configuration
+/config.local.json
+/config.local.toml
+/config.local.yaml
+/config.local.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache directories
+.cache/
+.sass-cache/
+.parcel-cache/
+
+# Lock files (Cargo.lock is kept for reproducible builds in libraries)
+# yarn.lock
+# package-lock.json
